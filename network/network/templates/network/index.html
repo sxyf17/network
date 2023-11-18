@@ -1,5 +1,40 @@
 {% extends "network/layout.html" %}
 
 {% block body %}
-    TODO
+    {% if not user.is_authenticated %}
+        <div id="welcome">
+            <h1>Welcome to Network!</h1>
+            <br>
+            <h3>Login or sign up now to get started</h3>
+        </div>
+        
+
+    {% else %}
+        <h1 style="font-family: sans-serif;">POSTS</h1>
+        <div id="addPost" style="margin: 10px; border: 1.5px solid rgb(150, 150, 150); padding: 15px; border-radius: 5px;">
+            <form action="{% url 'addPost' %}" method="POST">
+                {%csrf_token%}
+                <textarea name="postContent" style="width: 100%;"></textarea>
+                <input type="submit" value="Post" class="btn btn-primary">
+            </form>
+        </div>
+        <br>
+        <div>
+            {% for post in allPosts %}
+            {% load tz %}
+                <div style="padding: 20px; border: 1px solid black; margin: 10px;">
+                    <div style="font-weight: bold;">{{post.user}}</div>
+                    <div>{{post.content}}</div>
+                    <div style="color: gray;">{{post.created_at|timezone:"EST"}}</div>
+                    <div><img src="https://cdn.pixabay.com/photo/2020/09/30/07/48/heart-5614865_1280.png" style="height: 20px;"> {{ post.likes }}</div>
+                </div>
+            {% endfor %}
+        </div>
+
+
+
+    {% endif %}
+
+    
+       
 {% endblock %}
