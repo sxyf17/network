@@ -3,6 +3,10 @@ from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render,redirect
 from django.urls import reverse
+from django.http import JsonResponse
+import json
+from django.core.paginator import Paginator
+
 
 from .models import *
 
@@ -16,13 +20,29 @@ def addPost(request):
         post.save()
         return redirect('index')
 
+def follow(request, requestUserID, postUserID):
+    
+    if request.method == "POST" and requestUserID is not postUserID:
+         
+        requestUser = User.objects.get(pk=requestUserID)
+        postUser = User.objects.get(pk=postUserID)
+        postUser.followers.add(requestUser)
+    
+    if requestUserID == postUserID:
+        return render(request, "network/error.html", {
+            "error": "Error: cannot follow self"
+        })    
+    
+    return redirect('profile', userID=postUserID)
+
 
 def index(request):
     
-    allPosts = Post.objects.all()
+    allPosts = Post.objects.all().order_by("id").reverse()
+    p = Paginator(allPosts, 10)
     
     return render(request, "network/index.html", {
-        "allPosts": allPosts
+        "allPosts": allPosts,
     })
 
 
@@ -51,6 +71,61 @@ def logout_view(request):
     return HttpResponseRedirect(reverse("index"))
 
 
+def userJSON(request, userID):
+    
+    #query for requested user
+    try:
+        user = User.objects.get(pk=userID)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found."}, status=404)
+    
+    #return user model as JSON
+    if request.method == "GET":
+        return JsonResponse(user.serialize())
+    
+    #update user followers/following
+    elif request.method == "PUT":
+        data = json.loads(request.body)
+        if data.get("followers") is not None:
+            user.followers = data["followers"]
+        if data.get("following") is not None:
+            user.following = data["following"]
+        user.save()
+        return HttpResponse(status=204)
+    
+    else:
+        return JsonResponse({
+            "error": "GET or PUT request required"
+        }, status=400)
+
+
+def profile(request, userID): #clicking on user name will load this poster's profile page, or the user's profile
+    # show # of followers, # of people user follows
+    postUser = User.objects.get(pk=userID)
+    postFollowers = postUser.followers.all()
+    postFollowing = postUser.following.all()
+    userPosts = Post.objects.filter(user=postUser).order_by("id").reverse()
+    
+    followerCount = 0
+    followingCount = 0
+    for follower in postFollowers:
+        followerCount += 1
+    for user in postFollowing:
+        followingCount += 1
+        
+    #show user posts in reverse chronological order
+    return render(request, "network/profile.html", {
+        "postUser": postUser,
+        "postFollowers": postFollowers,
+        "followerCount": followerCount,
+        "postFollowing": postFollowing,
+        "followingCount": followingCount,
+        "postUser": postUser,
+        "requestUser": request.user,
+        "userPosts": userPosts
+    })
+
+
 def register(request):
     if request.method == "POST":
         username = request.POST["username"]
@@ -76,3 +151,18 @@ def register(request):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "network/register.html")
+    
+    
+def unfollow(request, requestUserID, postUserID):
+    if request.method == "POST" and requestUserID is not postUserID:
+         
+        requestUser = User.objects.get(pk=requestUserID)
+        postUser = User.objects.get(pk=postUserID)
+        requestUser.followers.remove(postUser)
+    
+    if requestUserID == postUserID:
+        return render(request, "network/error.html", {
+            "error": "Error: cannot follow self"
+        })    
+    
+    return redirect('profile', userID=postUserID)

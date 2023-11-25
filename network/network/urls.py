@@ -9,4 +9,10 @@ urlpatterns = [
     path("logout", views.logout_view, name="logout"),
     path("register", views.register, name="register"),
     path("addPost", views.addPost, name="addPost"),
+    path("profile/<int:userID>/", views.profile, name="profile"),
+    path("follow/<int:requestUserID>/<int:postUserID>/", views.follow, name="follow"),
+    path("unfollow/<int:requestUserID>/<int:postUserID>/", views.unfollow, name="unfollow"),
+    
+    #API routes
+    path("users/<int:userID>/", views.userJSON, name="userJSON"),
 ]
