@@ -22,18 +22,37 @@ def addPost(request):
 
 def follow(request, requestUserID, postUserID):
     
-    if request.method == "POST" and requestUserID is not postUserID:
-         
+    if request.method == "POST" and requestUserID != postUserID:
+        
         requestUser = User.objects.get(pk=requestUserID)
         postUser = User.objects.get(pk=postUserID)
-        postUser.followers.add(requestUser)
-    
+        
+        # Check if postUser is not already in the followers of requestUser
+        if postUser not in requestUser.following.all():
+            requestUser.following.add(postUser)
+           
+            
+        # Check if requestUser is not already in the followers of postUser
+        # if requestUser not in postUser.followers.all():
+        #     postUser.followers.add(requestUser)
+  
     if requestUserID == postUserID:
         return render(request, "network/error.html", {
             "error": "Error: cannot follow self"
         })    
     
-    return redirect('profile', userID=postUserID)
+    return redirect('profile', postUserID=postUserID)
+
+def following(request, userID):
+    
+    
+    user = User.objects.get(pk=userID)
+    followingIDs = user.following.values_list('id', flat=True)
+    userFollowingPosts = Post.objects.filter(user__id__in=followingIDs).order_by("id").reverse()
+    
+    return render(request, "network/following.html", {
+        "userFollowingPosts": userFollowingPosts
+    })
 
 
 def index(request):
@@ -99,12 +118,12 @@ def userJSON(request, userID):
         }, status=400)
 
 
-def profile(request, userID): #clicking on user name will load this poster's profile page, or the user's profile
+def profile(request, postUserID): #clicking on user name will load this poster's profile page, or the user's profile
     # show # of followers, # of people user follows
-    postUser = User.objects.get(pk=userID)
+    postUser = User.objects.get(pk=postUserID)
     postFollowers = postUser.followers.all()
     postFollowing = postUser.following.all()
-    userPosts = Post.objects.filter(user=postUser).order_by("id").reverse()
+    postUserPosts = Post.objects.filter(user=postUser).order_by("id").reverse()
     
     followerCount = 0
     followingCount = 0
@@ -122,7 +141,7 @@ def profile(request, userID): #clicking on user name will load this poster's pro
         "followingCount": followingCount,
         "postUser": postUser,
         "requestUser": request.user,
-        "userPosts": userPosts
+        "postUserPosts": postUserPosts
     })
 
 
@@ -154,15 +173,17 @@ def register(request):
     
     
 def unfollow(request, requestUserID, postUserID):
-    if request.method == "POST" and requestUserID is not postUserID:
+    if request.method == "POST" and requestUserID != postUserID:
          
         requestUser = User.objects.get(pk=requestUserID)
         postUser = User.objects.get(pk=postUserID)
         requestUser.followers.remove(postUser)
+        if postUser in requestUser.following.all():
+            requestUser.following.remove(postUser)
     
     if requestUserID == postUserID:
         return render(request, "network/error.html", {
             "error": "Error: cannot follow self"
         })    
     
-    return redirect('profile', userID=postUserID)
+    return redirect('profile', postUserID=postUserID)

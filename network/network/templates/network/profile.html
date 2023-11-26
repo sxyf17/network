@@ -3,47 +3,42 @@
 {% block body %}
 
 <h1 style="font-family: sans-serif; padding-left: 20px;">Welcome to {{postUser|title}}'s Page!</h1>
-{%csrf_token%}
-<p id="userID_to_follow">{{postUser.id}}</p>
-<p id="userID">{{requestUser.id}}</p>
-<button id="getUserInfo">Get user info</button>
+    {%csrf_token%}
+<div style="display: flex; justify-content: space-evenly; margin: 10px; font-weight: bolder; font-size: x-large;">
+    {% if followerCount != 1 %}
+        <p>{{followerCount}} Followers</p>
+    {%  else %}
+        <p>{{followerCount}} Follower</p>
+    {% endif %}
+    <p>{{followingCount}} Following</p>
+</div>
 
+{% if requestUser != postUser %}
 
+    {% if requestUser not in postFollowers %}
+        <form action="{% url 'follow' requestUser.id postUser.id %}" method="post">
+            {%csrf_token%}
+            <input class="btn btn-primary" type="submit" value="Follow">
+        </form>
+    {% else %}
+        <form action="{% url 'unfollow' requestUser.id postUser.id %}" method="post">
+            {%csrf_token%}
+            <input class="btn btn-danger" type="submit" value="Unfollow">
+        </form>
+    {% endif %}
 
-<p>{{followerCount}} follower(s)</p>
-
-<p>{%for follower in postFollowers%}
-        {{follower}}
-    {% endfor %}
-</p>
-{% if requestUser not in postFollowers %}
-    <form action="{% url 'follow' requestUser.id postUser.id %}" method="post">
-        {%csrf_token%}
-        <input class="btn btn-primary" type="submit" value="Follow">
-    </form>
-{% else %}
-    <form action="{% url 'unfollow' requestUser.id postUser.id %}" method="post">
-        {%csrf_token%}
-        <input class="btn btn-danger" type="submit" value="Unfollow">
-    </form>
 {% endif %}
+
 <br>
-<p>Following {{followingCount}} users</p>
-<p>{% for profile in postFollowing %}
-        {{profile}}
-    {% endfor %}
-</p>
-{% for post in userPosts %}
+
+{% for post in postUserPosts %}
 {% load tz %}
 <div style="padding: 20px; border: 1px solid black; margin: 10px;">
-    <div style="font-weight: bold;"><a href="{% url 'profile' userID=post.user.id %}">{{post.user}}</a></div>
+    <div style="font-weight: bold;"><a href="{% url 'profile' postUserID=post.user.id %}">{{post.user}}</a></div>
     <div>{{post.content}}</div>
     <div style="color: gray;">{{post.created_at|timezone:"EST"}}</div>
     <div><img src="https://cdn.pixabay.com/photo/2020/09/30/07/48/heart-5614865_1280.png" style="height: 20px;"> {{ post.likes }}</div>
 </div>
 {% endfor %}
-
-
-
 
 {% endblock %}
