@@ -7,13 +7,11 @@
             <br>
             <h3>Login or sign up now to get started</h3>
         </div>
-        
-
     {% else %}
         <h1 style="font-family: sans-serif; padding-left: 20px;">POSTS</h1>
         <div id="addPost" style="margin: 10px; border: 1.5px solid rgb(150, 150, 150); padding: 15px; border-radius: 5px;">
             <form action="{% url 'addPost' %}" method="POST">
-                {%csrf_token%}
+                {% csrf_token %}
                 <textarea name="postContent" style="width: 100%;"></textarea>
                 <input type="submit" value="Post" class="btn btn-primary">
             </form>
@@ -22,19 +20,60 @@
         <div>
             {% for post in allPosts %}
             {% load tz %}
-                <div style="padding: 20px; border: 1px solid black; margin: 10px;">
-                    <div style="font-weight: bold;"><a href="{% url 'profile' postUserID=post.user.id %}">{{post.user}}</a></div>
-                    <div>{{post.content}}</div>
-                    <div style="color: gray;">{{post.created_at|timezone:"EST"}}</div>
-                    <div><img src="https://cdn.pixabay.com/photo/2020/09/30/07/48/heart-5614865_1280.png" style="height: 20px;"> {{ post.likes }}</div>
+                <div class="postContent">
+                    <div style="font-weight: bold;"><a href="{% url 'profile' postUserID=post.user.id %}">{{ post.user }}</a></div>
+                    <div id="postContent">{{ post.content }}</div>
+                    <div id="timestamp" style="color: gray;">{{ post.updated_at|timezone:"EST" }}</div>
+                    <div id="postLikes">
+                        <img src="https://cdn.pixabay.com/photo/2020/09/30/07/48/heart-5614865_1280.png" onclick="likePost('{{post.id}}')" style="height: 20px;">
+                        <span id="likeCount-{{ post.id }}"> {{ post.likes }}</span>
+                        <img src="https://www.thatericalper.com/wp-content/uploads/2013/05/Facebook-Unlike.jpeg" onclick="unlikePost('{{post.id}}')" style="height: 20px;">
+                        {% if user == post.user %}
+                        <div>
+                            <button class="btn btn-primary" type="button" data-toggle="modal" data-target="#modalEditPost{{ post.id }}" style="margin-top: 5px;">Edit Post</button>
+                        </div>    
+                        <div class="modal" id="modalEditPost{{ post.id }}" tabindex="-1" role="dialog" aria-hidden="true" aria-labelledby="modalEditPost{{ post.id }}">
+                            <div class="modal-dialog" role="document">
+                              <div class="modal-content">
+                                <div class="modal-header">
+                                  <h5 class="modal-title">Modal title</h5>
+                                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                  </button>
+                                </div>
+                                <div class="modal-body">
+                                  <textarea id="editPost-{{ post.id }}">{{ post.content }}</textarea>
+                                </div>
+                                <div class="modal-footer">
+                                  <button type="button" class="btn btn-primary" onclick="editPost('{{post.id}}')">Save changes</button>
+                                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        {% endif %}
+                    </div>
                 </div>
             {% endfor %}
         </div>
 
+        <!-- Pagination links -->
+        <div class="pagination">
+            <span class="step-links">
+                {% if allPosts.has_previous %}
+                    <a href="?page=1">&laquo; first</a>
+                    <a href="?page={{ allPosts.previous_page_number }}">previous</a>
+                {% endif %}
 
+                <span class="current">
+                    Page {{ allPosts.number }} of {{ allPosts.paginator.num_pages }}.
+                </span>
 
+                {% if allPosts.has_next %}
+                    <a href="?page={{ allPosts.next_page_number }}">next</a>
+                    <a href="?page={{ allPosts.paginator.num_pages }}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
     {% endif %}
-
-    
-       
 {% endblock %}

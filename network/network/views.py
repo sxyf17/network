@@ -6,9 +6,9 @@ from django.urls import reverse
 from django.http import JsonResponse
 import json
 from django.core.paginator import Paginator
-
-
 from .models import *
+from django.views.decorators.csrf import csrf_exempt
+
 
 
 def addPost(request):
@@ -19,6 +19,7 @@ def addPost(request):
         post = Post(user=user,content=content)
         post.save()
         return redirect('index')
+    
 
 def follow(request, requestUserID, postUserID):
     
@@ -30,11 +31,6 @@ def follow(request, requestUserID, postUserID):
         # Check if postUser is not already in the followers of requestUser
         if postUser not in requestUser.following.all():
             requestUser.following.add(postUser)
-           
-            
-        # Check if requestUser is not already in the followers of postUser
-        # if requestUser not in postUser.followers.all():
-        #     postUser.followers.add(requestUser)
   
     if requestUserID == postUserID:
         return render(request, "network/error.html", {
@@ -43,8 +39,8 @@ def follow(request, requestUserID, postUserID):
     
     return redirect('profile', postUserID=postUserID)
 
+
 def following(request, userID):
-    
     
     user = User.objects.get(pk=userID)
     followingIDs = user.following.values_list('id', flat=True)
@@ -58,10 +54,13 @@ def following(request, userID):
 def index(request):
     
     allPosts = Post.objects.all().order_by("id").reverse()
-    p = Paginator(allPosts, 10)
+    paginator = Paginator(allPosts, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     return render(request, "network/index.html", {
-        "allPosts": allPosts,
+        "allPosts": page_obj,
+        
     })
 
 
@@ -88,34 +87,6 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return HttpResponseRedirect(reverse("index"))
-
-
-def userJSON(request, userID):
-    
-    #query for requested user
-    try:
-        user = User.objects.get(pk=userID)
-    except User.DoesNotExist:
-        return JsonResponse({"error": "User not found."}, status=404)
-    
-    #return user model as JSON
-    if request.method == "GET":
-        return JsonResponse(user.serialize())
-    
-    #update user followers/following
-    elif request.method == "PUT":
-        data = json.loads(request.body)
-        if data.get("followers") is not None:
-            user.followers = data["followers"]
-        if data.get("following") is not None:
-            user.following = data["following"]
-        user.save()
-        return HttpResponse(status=204)
-    
-    else:
-        return JsonResponse({
-            "error": "GET or PUT request required"
-        }, status=400)
 
 
 def profile(request, postUserID): #clicking on user name will load this poster's profile page, or the user's profile
@@ -170,6 +141,38 @@ def register(request):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "network/register.html")
+    
+@csrf_exempt
+def postJSON(request, postID):
+    
+    #query for requested user
+    try:
+        post = Post.objects.get(pk=postID)
+    except Post.DoesNotExist:
+        return JsonResponse({"error": "Post not found."}, status=404)
+    
+    #return post model as JSON
+    except post.DoesNotExist:
+        return JsonResponse({"error": "User not found."}, status=404)
+    
+    #return user model as JSON
+    if request.method == "GET":
+        return JsonResponse(post.serialize())
+    
+    #update post likes
+    elif request.method == "PUT":
+        data = json.loads(request.body)
+        if data.get("likes") is not None:
+            post.likes = data["likes"]
+        if data.get("content") is not None:
+            post.content = data["content"]
+        post.save()
+        return HttpResponse(status=204)
+    
+    else:
+        return JsonResponse({
+            "error": "GET or PUT request required"
+        }, status=400)
     
     
 def unfollow(request, requestUserID, postUserID):

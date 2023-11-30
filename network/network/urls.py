@@ -15,5 +15,5 @@ urlpatterns = [
     path("following/<int:userID>/", views.following, name="following"),
     
     #API routes
-    path("users/<int:userID>/", views.userJSON, name="userJSON"),
+    path("posts/<int:postID>/", views.postJSON, name="postJSON"),
 ]
